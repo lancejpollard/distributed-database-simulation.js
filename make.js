@@ -2,8 +2,8 @@
 const knex = require('knex')
 const { faker } = require('@faker-js/faker')
 const { flatten } = require('lodash')
-const cityList = require('./city.json')
 console.log('generating initial data...')
+const cityList = require('./city.json')
 const personIdList = generateIdList(1000000)
 const companyIdList = generateIdList(100000)
 const cityIdList = generateIdList(cityList.length)
@@ -109,9 +109,11 @@ async function start() {
   shuffleArray(personIdList)
   shuffleArray(companyIdList)
 
+  const personIdListMembership = personIdList.concat()
+
   for (let i = 0, n = connections.length; i < n; i++) {
     const knex = connections[i]
-    await seedMembership(knex, i)
+    await seedMembership(knex, i, personIdListMembership)
   }
 
   shuffleArray(personIdList)
@@ -184,7 +186,7 @@ async function seedBaseCompany(knex, i) {
 
 async function seedPersonAccount(knex, i) {
   console.log(`=== seedPersonAccount ${i} ===`)
-  const bucketList = chunkArray(personIdList.slice(i * 100000, 100000), 5000)
+  const bucketList = chunkArray(personIdList.slice(i * 100000, (i * 100000) + 100000), 5000)
 
   for (let j = 0, m = bucketList.length; j < m; j++) {
     const list = bucketList[j].map(entity_id => {
@@ -195,7 +197,7 @@ async function seedPersonAccount(knex, i) {
       }
     })
 
-    const listSize = (j + 1) * list.length
+    const listSize = (i * 100000) + ((j + 1) * list.length)
 
     console.log('insert account', listSize)
 
@@ -205,7 +207,7 @@ async function seedPersonAccount(knex, i) {
 
 async function seedCompanyAccount(knex, i) {
   console.log(`=== seedCompanyAccount ${i} ===`)
-  const bucketList = chunkArray(companyIdList.slice(i * 25000, 25000), 5000)
+  const bucketList = chunkArray(companyIdList.slice(i * 25000, (i * 25000) + 25000), 5000)
 
   for (let j = 0, m = bucketList.length; j < m; j++) {
     const list = bucketList[j].map(entity_id => {
@@ -216,7 +218,7 @@ async function seedCompanyAccount(knex, i) {
       }
     })
 
-    const listSize = (j + 1) * list.length
+    const listSize = (i * 25000) + ((j + 1) * list.length)
 
     console.log('insert account', listSize)
 
@@ -224,17 +226,19 @@ async function seedCompanyAccount(knex, i) {
   }
 }
 
-async function seedMembership(knex, i) {
+async function seedMembership(knex, i, personIdList) {
   console.log(`=== seedMembership ${i} ===`)
-  const cIdList = companyIdList.slice(i * 10000, 10000)
+  const cIdList = companyIdList.slice(i * 10000, (i * 10000) + 10000)
   const membershipTypeList = [`admin`, `employee`, `manager`]
-  const pIdList = personIdList.concat()
-  let total = 0
+  const pIdList = personIdList.splice(i * 100000, (i * 100000) + 100000)
+  const max = Math.floor(pIdList.length / 10000)
+
+  const finalMembershipList = []
 
   for (let k = 0, n = cIdList.length; k < n; k++) {
     const company_id = cIdList[k]
 
-    const membershipList = pIdList.splice(0, randomIntFromInterval(2, 2000))
+    const membershipList = pIdList.splice(0, randomIntFromInterval(2, max))
       .map(person_id => {
         const type = membershipTypeList[randomIntFromInterval(0, 2)]
         return {
@@ -244,15 +248,21 @@ async function seedMembership(knex, i) {
         }
       })
 
-    total += membershipList.length
-
-    console.log('insert membership', total)
-
-    await knex('membership').insert(membershipList)
+    finalMembershipList.push(...membershipList)
 
     if (pIdList.length === 0) {
       break
     }
+  }
+
+  const bucketList = chunkArray(finalMembershipList, 5000)
+  for (let j = 0, m = bucketList.length; j < m; j++) {
+    const list = bucketList[j]
+    const listSize = (j * 5000) + (j + 1) * list.length
+
+    console.log('insert membership', listSize)
+
+    await knex('membership').insert(list)
   }
 }
 
@@ -260,7 +270,7 @@ async function seedPersonLocation(knex, i) {
   console.log(`=== seedPersonLocation ${i} ===`)
   const locationTypeList = [`work`, `home`]
 
-  const bucketList = chunkArray(personIdList.slice(i * 100000, 100000), 5000)
+  const bucketList = chunkArray(personIdList.slice(i * 100000, (i * 100000) + 100000), 5000)
 
   for (let j = 0, m = bucketList.length; j < m; j++) {
     const list = bucketList[j]
@@ -285,7 +295,7 @@ async function seedPersonLocation(knex, i) {
       })
     }
 
-    const listSize = (j + 1) * entityLocationList.length
+    const listSize = (i * 200000) + (j + 1) * entityLocationList.length
 
     console.log('insert entity_location', listSize)
 

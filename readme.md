@@ -16,3 +16,5 @@ The models are:
 So there are a 3 replicas, each with 10 databases. One database is considered the main database, which has some important information such as the centralized locations. There are 1 million people, scattered across the 10 databases. There are 100k companies, on 4 databases. There are a random number of employees between 2 and 2000 at companies, with roles employee or manager. Each employee has a home address and an optionally different work address, about 20% have a different work address. Each person and company has an account.
 
 When a company pays a person, we deduct from their account and add to the person's account in a distributed transaction.
+
+Seeding with `make` takes about 5 minutes for 1 replica.
