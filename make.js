@@ -3,11 +3,13 @@ const knex = require('knex')
 const { faker } = require('@faker-js/faker')
 const { flatten } = require('lodash')
 const cityList = require('./city.json')
+console.log('generating initial data...')
 const personIdList = generateIdList(1000000)
 const companyIdList = generateIdList(100000)
 const cityIdList = generateIdList(cityList.length)
 const peopleBucketList = generatePeopleList()
 const companyBucketList = generateCompanyList()
+console.log('done generating')
 
 class MigrationSource {
   getMigrations() {
@@ -39,33 +41,44 @@ class MigrationSource {
               t.timestamps()
               t.string('city').notNull()
               t.string('state').notNull()
+              t.index(['city'])
+              t.index(['state'])
             })
             await knex.schema.createTable('entity_location', t => {
               t.increments()
               t.timestamps()
               t.string('type').notNull()
               t.integer('entity_id').notNull()
+              t.foreign('entity_id')
               t.string('entity_type').notNull()
               t.integer('location_id').notNull()
+              t.foreign('location_id')
+              t.index(['entity_type', 'entity_id'])
             })
             await knex.schema.createTable('membership', t => {
               t.increments()
               t.timestamps()
               t.string('type').notNull()
               t.integer('person_id').notNull()
+              t.foreign('person_id')
               t.integer('company_id').notNull()
+              t.foreign('company_id')
+              t.index(['company_id', 'person_id'])
             })
             await knex.schema.createTable('account', t => {
               t.increments()
               t.timestamps()
               t.integer('entity_id').notNull()
+              t.foreign('entity_id')
               t.string('entity_type').notNull()
               t.integer('balance').notNull().defaultTo(0)
+              t.index(['entity_type', 'entity_id'])
             })
             await knex.schema.createTable('account_change', t => {
               t.increments()
               t.timestamps()
               t.integer('account_id').notNull()
+              t.foreign('account_id')
               t.integer('amount').notNull().defaultTo(0)
             })
           },
@@ -93,9 +106,31 @@ async function start() {
     await seedBase(knex, i)
   }
 
+  shuffleArray(personIdList)
+  shuffleArray(companyIdList)
+
   for (let i = 0, n = connections.length; i < n; i++) {
     const knex = connections[i]
-    await seedLink(knex, i)
+    await seedMembership(knex, i)
+  }
+
+  shuffleArray(personIdList)
+  shuffleArray(companyIdList)
+
+  for (let i = 0, n = connections.length; i < n; i++) {
+    const knex = connections[i]
+    await seedPersonLocation(knex, i)
+  }
+
+  shuffleArray(personIdList)
+  shuffleArray(companyIdList)
+
+  for (let i = 0, n = connections.length; i < n; i++) {
+    const knex = connections[i]
+    await seedPersonAccount(knex, i)
+    if (i < 4) {
+      await seedCompanyAccount(knex, i)
+    }
   }
 
   for (let i = 0, n = connections.length; i < n; i++) {
@@ -110,6 +145,7 @@ async function migrate(knex) {
 
 async function seedBase(knex, i) {
   if (i === 0) {
+    console.log('=== seedBaseLocation ===')
     await knex('location').insert(cityList)
   }
 
@@ -121,36 +157,34 @@ async function seedBase(knex, i) {
 }
 
 async function seedBasePeople(knex, i) {
+  console.log(`=== seedBasePeople ${i} ===`)
+  const size = peopleBucketList[i].length
   const bucketList = chunkArray(peopleBucketList[i], 10000)
 
   for (let k = 0, n = bucketList.length; k < n; k++) {
     const list = bucketList[k]
-    console.log('insert person', list.length, k)
+    const listSize = (i * size) + (list.length * (k + 1))
+    console.log('insert person', listSize)
     await knex('person').insert(list)
   }
 }
 
 async function seedBaseCompany(knex, i) {
+  console.log(`=== seedBaseCompany ${i} ===`)
+  const size = companyBucketList[i].length
   const bucketList = chunkArray(companyBucketList[i], 10000)
 
   for (let k = 0, n = bucketList.length; k < n; k++) {
     const list = bucketList[k]
-    console.log('insert company', list.length, k)
+    const listSize = (i * size) + (list.length * (k + 1))
+    console.log('insert company', listSize)
     await knex('company').insert(list)
   }
 }
 
-async function seedLink(knex, i) {
-  await seedMembership(knex, i)
-  await seedPersonLocation(knex, i)
-  await seedPersonAccount(knex, i)
-  await seedCompanyAccount(knex, i)
-}
-
 async function seedPersonAccount(knex, i) {
-  shuffleArray(personIdList)
-
-  const bucketList = chunkArray(personIdList.slice(i * 100000), 5000)
+  console.log(`=== seedPersonAccount ${i} ===`)
+  const bucketList = chunkArray(personIdList.slice(i * 100000, 100000), 5000)
 
   for (let j = 0, m = bucketList.length; j < m; j++) {
     const list = bucketList[j].map(entity_id => {
@@ -161,16 +195,17 @@ async function seedPersonAccount(knex, i) {
       }
     })
 
-    console.log('insert account', list.length, j)
+    const listSize = (j + 1) * list.length
+
+    console.log('insert account', listSize)
 
     await knex('account').insert(list)
   }
 }
 
 async function seedCompanyAccount(knex, i) {
-  shuffleArray(companyIdList)
-
-  const bucketList = chunkArray(companyIdList.slice(i * 100000), 5000)
+  console.log(`=== seedCompanyAccount ${i} ===`)
+  const bucketList = chunkArray(companyIdList.slice(i * 25000, 25000), 5000)
 
   for (let j = 0, m = bucketList.length; j < m; j++) {
     const list = bucketList[j].map(entity_id => {
@@ -181,18 +216,20 @@ async function seedCompanyAccount(knex, i) {
       }
     })
 
-    console.log('insert account', list.length, j)
+    const listSize = (j + 1) * list.length
+
+    console.log('insert account', listSize)
 
     await knex('account').insert(list)
   }
 }
 
 async function seedMembership(knex, i) {
-  shuffleArray(personIdList)
-
+  console.log(`=== seedMembership ${i} ===`)
   const cIdList = companyIdList.slice(i * 10000, 10000)
   const membershipTypeList = [`admin`, `employee`, `manager`]
   const pIdList = personIdList.concat()
+  let total = 0
 
   for (let k = 0, n = cIdList.length; k < n; k++) {
     const company_id = cIdList[k]
@@ -207,7 +244,9 @@ async function seedMembership(knex, i) {
         }
       })
 
-    console.log('insert membership', membershipList.length)
+    total += membershipList.length
+
+    console.log('insert membership', total)
 
     await knex('membership').insert(membershipList)
 
@@ -218,11 +257,10 @@ async function seedMembership(knex, i) {
 }
 
 async function seedPersonLocation(knex, i) {
-  shuffleArray(personIdList)
-
+  console.log(`=== seedPersonLocation ${i} ===`)
   const locationTypeList = [`work`, `home`]
 
-  const bucketList = chunkArray(personIdList.slice(i * 100000), 5000)
+  const bucketList = chunkArray(personIdList.slice(i * 100000, 100000), 5000)
 
   for (let j = 0, m = bucketList.length; j < m; j++) {
     const list = bucketList[j]
@@ -247,7 +285,9 @@ async function seedPersonLocation(knex, i) {
       })
     }
 
-    console.log('insert entity_location', entityLocationList.length, j)
+    const listSize = (j + 1) * entityLocationList.length
+
+    console.log('insert entity_location', listSize)
 
     await knex('entity_location').insert(entityLocationList)
   }
@@ -255,7 +295,7 @@ async function seedPersonLocation(knex, i) {
 
 function generateIdList(size) {
   const list = []
-  let i = 0
+  let i = 1
   while (i < size) {
     list.push(i++)
   }
@@ -267,10 +307,19 @@ function generatePeopleList() {
   let i = 0
   const n = 1000000
   const people = []
+  const emails = {}
   while (i < n) {
+    let email
+    while (true) {
+      email = faker.internet.email()
+      if (!emails[email]) {
+        emails[email] = true
+        break
+      }
+    }
     const person = {
       name: faker.name.findName(),
-      email: faker.internet.email(),
+      email,
     }
     people.push(person)
     i++
