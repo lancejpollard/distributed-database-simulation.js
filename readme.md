@@ -18,3 +18,10 @@ So there are a 3 replicas, each with 10 databases. One database is considered th
 When a company pays a person, we deduct from their account and add to the person's account in a distributed transaction.
 
 Seeding with `make` takes about 5 minutes for 1 replica.
+
+## Todo
+
+- [ ] Implement a database snapshot command.
+- [ ] Implement a simple distributed single-table query.
+- [ ] Implement a simple distributed join table query.
+- [ ] Implement a simple distributed transaction.
