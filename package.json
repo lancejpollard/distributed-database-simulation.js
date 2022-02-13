@@ -1,6 +1,9 @@
 {
   "dependencies": {
+    "@faker-js/faker": "^6.0.0-alpha.6",
+    "faker": "^6.6.6",
     "knex": "^1.0.3",
+    "lodash": "^4.17.21",
     "pg": "^8.7.3"
   }
 }
