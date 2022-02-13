@@ -1,9 +1,12 @@
 {
   "dependencies": {
     "@faker-js/faker": "^6.0.0-alpha.6",
-    "faker": "^6.6.6",
+    "concurrently": "^7.0.0",
     "knex": "^1.0.3",
     "lodash": "^4.17.21",
     "pg": "^8.7.3"
+  },
+  "scripts": {
+    "start": "concurrently \"node host 1234\" \"node host 1235\" \"node host 1236\" \"node host 1237\" \"node host 1238\" \"node host 1239\" \"node host 1240\" \"node host 1241\" \"node host 1242\" \"node host 1243\""
   }
 }

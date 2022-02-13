@@ -1,6 +1,9 @@
 
-system:
+database:
 	@psql postgres -f make.sql
-	# @DEBUG=knex:query node make
 	@node make
-.PHONY: system
+.PHONY: database
+
+service:
+	@npm run start
+.PHONY: service
