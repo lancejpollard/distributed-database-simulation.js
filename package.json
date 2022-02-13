@@ -7,6 +7,6 @@
     "pg": "^8.7.3"
   },
   "scripts": {
-    "start": "concurrently \"node host 1234\" \"node host 1235\" \"node host 1236\" \"node host 1237\" \"node host 1238\" \"node host 1239\" \"node host 1240\" \"node host 1241\" \"node host 1242\" \"node host 1243\""
+    "start": "concurrently \"node host 0\" \"node host 1\" \"node host 2\" \"node host 3\" \"node host 4\" \"node host 5\" \"node host 6\" \"node host 7\" \"node host 8\" \"node host 9\""
   }
 }
